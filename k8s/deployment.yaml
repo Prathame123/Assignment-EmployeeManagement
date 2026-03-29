@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-management-api
+  namespace: default
+  labels:
+    app: employee-management-api
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: employee-management-api
+  template:
+    metadata:
+      labels:
+        app: employee-management-api
+    spec:
+      containers:
+        - name: employee-management-api
+          image: yourACRName.azurecr.io/employee-management-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+            - name: DatabaseProvider
+              valueFrom:
+                configMapKeyRef:
+                  name: employee-api-config
+                  key: DatabaseProvider
+            - name: ConnectionStrings__SqlServer
+              valueFrom:
+                secretKeyRef:
+                  name: employee-api-secrets
+                  key: SqlServerConnectionString
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+      imagePullSecrets:
+        - name: acr-secret
